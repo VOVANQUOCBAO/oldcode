@@ -1,5 +1,14 @@
 <?php
 session_start();
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\SMTP;
+use PHPMailer\PHPMailer\Exception;
+
+require_once dirname(__DIR__, 2) . '/PHPMailer/src/Exception.php';
+require_once dirname(__DIR__, 2) . '/PHPMailer/src/PHPMailer.php';
+require_once dirname(__DIR__, 2) . '/PHPMailer/src/SMTP.php';
+
 include __DIR__ . '/controller.php';
 
 $act = $_REQUEST['act'] ?? 'trangchu';
@@ -45,6 +54,46 @@ try {
                 ['keyword' => '%' . $keyword . '%']
             );
             include __DIR__ . '/../view/danhmuc.php';
+            break;
+
+        case 'email':
+            include __DIR__ . '/../view/email.php';
+            break;
+
+        case 'gui_email':
+            if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+                throw new RuntimeException('Không thể gửi email bằng phương thức này.');
+            }
+
+            $to = trim((string) ($_POST['to'] ?? ''));
+            $name = trim((string) ($_POST['name'] ?? 'Khách hàng'));
+            $subject = trim((string) ($_POST['subject'] ?? 'Thông báo từ MyWeb'));
+            $message = trim((string) ($_POST['content'] ?? ''));
+
+            if ($to === '' || $message === '') {
+                throw new RuntimeException('Vui lòng nhập email người nhận và nội dung email.');
+            }
+
+            $mail = new PHPMailer(true);
+            $mail->SMTPDebug = 0;
+            $mail->isSMTP();
+            $mail->Host = 'smtp.gmail.com';
+            $mail->SMTPAuth = true;
+            $mail->Username = 'your_email@gmail.com';
+            $mail->Password = 'your_app_password';
+            $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+            $mail->Port = 587;
+            $mail->CharSet = 'UTF-8';
+            $mail->setFrom('your_email@gmail.com', 'MyWeb Admin');
+            $mail->addAddress($to, $name);
+            $mail->isHTML(true);
+            $mail->Subject = $subject === '' ? 'Thông báo từ MyWeb' : $subject;
+            $mail->Body = nl2br($message);
+            $mail->AltBody = strip_tags($message);
+
+            $mail->send();
+            $success = 'Gửi email thành công!';
+            include __DIR__ . '/../view/email.php';
             break;
 
         case 'trangchu':
